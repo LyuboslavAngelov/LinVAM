@@ -4,6 +4,7 @@ import time
 import threading
 import os, pyaudio
 import shutil
+import random
 import re
 from pocketsphinx import *
 from soundfiles import SoundFiles
@@ -250,9 +251,13 @@ class ProfileExecutor(threading.Thread):
             del self.m_cmdThreads[p_cmdName]
 
     def playSound(self, p_cmdName):
-        sound_file = './voicepacks/' + p_cmdName['pack'] + '/' + p_cmdName['cat'] + '/' + p_cmdName['file']
+        # backwards compatibility with previous type
+        if isinstance(p_cmdName['file'], str):
+            selected_file = p_cmdName['file']
+        elif isinstance(p_cmdName['file'], list):
+            selected_file = random.choice(p_cmdName['file'])
+        sound_file = './voicepacks/' + p_cmdName['pack'] + '/' + p_cmdName['cat'] + '/' + selected_file
         self.m_sound.play(sound_file)
-
 
     def pressKey(self, w_key, w_type):
         if self.p_parent.m_config['noroot'] == 1:
