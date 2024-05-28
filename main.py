@@ -14,13 +14,18 @@ import shutil
 import subprocess
 import shlex
 from soundfiles import SoundFiles
+import pyaudio
+
 
 class MainWnd(QWidget):
 	def __init__(self, p_parent = None):
 		super().__init__(p_parent)
 
+		self.device_map = {}
+
 		self.ui = Ui_MainWidget()
 		self.ui.setupUi(self)
+		self.populate_audio_devices()
 		self.handleArgs()
 		self.m_sound = SoundFiles()
 		self.m_profileExecutor = ProfileExecutor(None, self)
@@ -37,6 +42,7 @@ class MainWnd(QWidget):
 		self.ui.ok.clicked.connect(self.slotOK)
 		self.ui.cancel.clicked.connect(self.slotCancel)
 		self.ui.sliderVolume.valueChanged.connect(lambda: self.m_sound.setVolume(self.ui.sliderVolume.value()))
+		self.ui.deviceCbx.currentIndexChanged.connect(self.m_profileExecutor.openStream)
 		signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 		if self.loadFromDatabase() > 0 :
@@ -47,6 +53,25 @@ class MainWnd(QWidget):
 				self.m_profileExecutor.setProfile(self.m_activeProfile)
 				#self.m_profileExecutor.start()
 
+	def populate_audio_devices(self):
+		p = pyaudio.PyAudio()
+
+		# Get default input device info
+		default_device_info = p.get_default_input_device_info()
+		default_device_index = default_device_info['index']
+
+		comboBoxIndex = 0
+		for i in range(p.get_device_count()):
+			info = p.get_device_info_by_index(i)
+			if info['maxInputChannels'] > 0:
+				device_name = info['name'].lower()
+				self.device_map[comboBoxIndex] = i
+				self.ui.deviceCbx.addItem(f"{info['name']} ({info['index']})", info['index'])
+				if info['index'] == default_device_index:
+					self.ui.deviceCbx.setCurrentIndex(self.ui.deviceCbx.count() - 1)
+				comboBoxIndex += 1
+
+		p.terminate()
 
 	def saveToDatabase(self):
 		w_profiles = []

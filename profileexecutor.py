@@ -1,12 +1,16 @@
 import keyboard
-from pynput.mouse import Button, Controller
+import os
 import time
 import threading
-import os, pyaudio
-import shutil
 import random
 import re
+import shutil
+
+from pynput.mouse import Button, Controller
 from pocketsphinx import *
+import pyaudio
+import wave
+
 from soundfiles import SoundFiles
 
 
@@ -15,6 +19,7 @@ class ProfileExecutor(threading.Thread):
 
     def __init__(self, p_profile = None, p_parent = None):
         # threading.Thread.__init__(self)
+        self.p_parent = p_parent
 
         # does nothing?
         self.setProfile(p_profile)
@@ -30,19 +35,15 @@ class ProfileExecutor(threading.Thread):
         )
 
         self.m_pyaudio = pyaudio.PyAudio()
-
-        try:
-            self.m_stream = self.m_pyaudio.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True)
-        except:
-            samplerate = int(self.m_pyaudio.get_device_info_by_index(0).get('defaultSampleRate'))
-            self.m_stream = self.m_pyaudio.open(format=pyaudio.paInt16, channels=1, rate=samplerate, input=True)
+        self.samplerate = 16000
+        self.channels = 1
+        self.openStream(self.p_parent.ui.deviceCbx.currentIndex())
 
         # Process audio chunk by chunk. On keyword detected perform action and restart search
         self.m_decoder = Decoder(self.m_config)
 
         self.m_thread = False
 
-        self.p_parent = p_parent
         if not self.p_parent == None:
             self.m_sound = self.p_parent.m_sound
 
@@ -81,6 +82,43 @@ class ProfileExecutor(threading.Thread):
             self.m_thread.start()
         else:
             self.m_decoder.reinit(self.m_config)
+    
+    def openStream(self, comboBoxIndex):
+        try:
+            self.m_stream.stop_stream()
+            self.m_stream.close()
+        except AttributeError:
+            pass
+        
+        selected_device_index = self.p_parent.device_map[comboBoxIndex]
+
+        try:
+            self.m_stream = self.m_pyaudio.open(
+                format=pyaudio.paInt16,
+                channels=1,
+                rate=16000,
+                input=True,
+                input_device_index=selected_device_index,
+            )
+        except:
+            device = self.m_pyaudio.get_device_info_by_index(selected_device_index)
+            self.samplerate = int(device.get('defaultSampleRate'))
+            self.channels = int(device.get('maxInputChannels'))
+            print(
+                "Unsupported sample rate 16000 or channels 1, "
+                "falling back to default samplerate {samplerate} "
+                "and default channels{channels}.".format(
+                    samplerate=self.samplerate,
+                    channels=self.channels
+                )
+            )
+            self.m_stream = self.m_pyaudio.open(
+                format=pyaudio.paInt16,
+                channels=self.channels,
+                rate=self.samplerate,
+                input=True,
+                input_device_index=selected_device_index,
+            )
 
     def setEnableListening(self, p_enable):
         if self.m_listening == False and p_enable == True:
@@ -96,28 +134,48 @@ class ProfileExecutor(threading.Thread):
         print("Detection started")
         self.m_listening = True
         self.m_decoder.start_utt()
-        while self.m_stop != True:
-            buf = self.m_stream.read(1024)
+        
+        frame_duration_ms = 10  # Frame size in milliseconds
+        frame_size = int(self.samplerate * frame_duration_ms / 1000) # 320 samples for 20ms at 16kHz
 
-            self.m_decoder.process_raw(buf, False, False)
+        # raw_audio_data = b''  # Initialize a buffer to store raw audio
+        
+        while not self.m_stop:
+            try:
+                buf = self.m_stream.read(frame_size, exception_on_overflow=False)
+                if len(buf) == 0:
+                    continue
 
-            if self.m_decoder.hyp() != None:
-                #print([(seg.word, seg.prob, seg.start_frame, seg.end_frame) for seg in self.m_decoder.seg()])
-                #print("Detected keyword, restarting search")
+                # raw_audio_data += buf
+                self.m_decoder.process_raw(buf, False, False)
+                if self.m_decoder.hyp() is not None:
+                    for seg in self.m_decoder.seg():
+                        print("Detected: ", seg.word)
+                        self.doCommand(seg.word.rstrip())
+                        break
+                    self.m_decoder.end_utt()
+                    self.m_decoder.start_utt()
+            except IOError as e:
+                print(f"Error reading stream: {e}")
+                self.restart_stream()
+        
+        # self.save_audio_file('raw_audio.wav', raw_audio_data)
+        # self.save_audio_file('suppressed_audio.wav', suppressed_audio_data)
 
-                # hack :)
-                for seg in self.m_decoder.seg():
-                    print("Detected: ",seg.word)
-                    break
+    def restart_stream(self):
+        print("Restarting stream due to error")
+        self.openStream(self.p_parent.ui.deviceCbx.currentIndex())
+        self.m_stream.start_stream()
+    
+    def save_audio_file(self, filename, audio_data):
+        """For debugging."""
+        wf = wave.open(filename, 'wb')
+        wf.setnchannels(1)  # Mono audio
+        wf.setsampwidth(self.m_pyaudio.get_sample_size(pyaudio.paInt16))
+        wf.setframerate(self.samplerate)  # 16kHz sample rate
+        wf.writeframes(audio_data)
+        wf.close()
 
-                #
-                # Here you run the code you want based on keyword
-                #
-                for w_seg in self.m_decoder.seg():
-                    self.doCommand(w_seg.word.rstrip())
-
-                self.m_decoder.end_utt()
-                self.m_decoder.start_utt()
 
    # def run(self):
 

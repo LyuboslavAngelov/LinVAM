@@ -1,19 +1,10 @@
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'mainwnd.ui'
-#
-# Created by: PyQt5 UI code generator 5.14.2
-#
-# WARNING! All changes made in this file will be lost!
-
-
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 class Ui_MainWidget(object):
     def setupUi(self, MainWidget):
         MainWidget.setObjectName("MainWidget")
-        MainWidget.resize(820, 166)
+        MainWidget.resize(820, 200)  # Increased the height to accommodate the combo box
         font = QtGui.QFont()
         font.setPointSize(10)
         MainWidget.setFont(font)
@@ -21,6 +12,15 @@ class Ui_MainWidget(object):
         self.gridLayout_2.setContentsMargins(-1, 20, -1, -1)
         self.gridLayout_2.setVerticalSpacing(20)
         self.gridLayout_2.setObjectName("gridLayout_2")
+        
+        # Device selection combo box
+        self.deviceLabel = QtWidgets.QLabel(MainWidget)
+        self.deviceLabel.setText("Select Audio Device:")
+        self.gridLayout_2.addWidget(self.deviceLabel, 0, 0, 1, 1)
+        
+        self.deviceCbx = QtWidgets.QComboBox(MainWidget)
+        self.gridLayout_2.addWidget(self.deviceCbx, 0, 1, 1, 1)
+
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setSpacing(20)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
@@ -50,7 +50,8 @@ class Ui_MainWidget(object):
         self.cancel.setMinimumSize(QtCore.QSize(130, 0))
         self.cancel.setObjectName("cancel")
         self.horizontalLayout_2.addWidget(self.cancel)
-        self.gridLayout_2.addLayout(self.horizontalLayout_2, 2, 0, 1, 1)
+        self.gridLayout_2.addLayout(self.horizontalLayout_2, 3, 0, 1, 1)
+        
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setSpacing(20)
         self.horizontalLayout.setObjectName("horizontalLayout")
@@ -83,7 +84,7 @@ class Ui_MainWidget(object):
         self.removeBut.setMinimumSize(QtCore.QSize(75, 0))
         self.removeBut.setObjectName("removeBut")
         self.horizontalLayout.addWidget(self.removeBut)
-        self.gridLayout_2.addLayout(self.horizontalLayout, 1, 0, 1, 1)
+        self.gridLayout_2.addLayout(self.horizontalLayout, 2, 0, 1, 1)
 
         self.retranslateUi(MainWidget)
         QtCore.QMetaObject.connectSlotsByName(MainWidget)
