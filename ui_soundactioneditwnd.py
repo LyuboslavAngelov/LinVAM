@@ -27,6 +27,7 @@ class Ui_SoundSelect(object):
         self.listFiles.setGeometry(QtCore.QRect(660, 90, 451, 231))
         self.listFiles.setLocale(QtCore.QLocale(QtCore.QLocale.English, QtCore.QLocale.UnitedStates))
         self.listFiles.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.listFiles.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.listFiles.setProperty("showDropIndicator", False)
         self.listFiles.setAlternatingRowColors(True)
         self.listFiles.setObjectName("listFiles")

@@ -17,7 +17,7 @@ class SoundActionEditWnd(QDialog):
 		self.p_sounds = p_sounds
 		self.selectedVoicepack = False
 		self.selectedCategory  = False
-		self.selectedFile      = False
+		self.selectedFiles     = []
 
 		self.ui.buttonOkay.clicked.connect(self.slotOK)
 		self.ui.buttonCancel.clicked.connect(super().reject)
@@ -29,7 +29,7 @@ class SoundActionEditWnd(QDialog):
 		if not p_soundAction == None:
 			self.selectedVoicepack = p_soundAction['pack']
 			self.selectedCategory = p_soundAction['cat']
-			self.selectedFile = p_soundAction['file']
+			self.selectedFiles = p_soundAction['file']
 			self.ui.buttonOkay.setEnabled(True)
 
 		self.listVoicepacks_model = QStandardItemModel()
@@ -53,7 +53,6 @@ class SoundActionEditWnd(QDialog):
 		self.ui.filterCategories.textChanged.connect(self.populateCategories)
 		self.ui.filterFiles.textChanged.connect(self.populateFiles)
 
-
 		self.populateCategories(False)
 		self.populateFiles(False)
 
@@ -70,17 +69,20 @@ class SoundActionEditWnd(QDialog):
 				index = self.listCategories_model.indexFromItem(item[0])
 				self.ui.listCategories.setCurrentIndex(index)
 
-		if not self.selectedFile == False:
-			item = self.listFiles_model.findItems(self.selectedFile)
-			if len(item) > 0:
-				index = self.listFiles_model.indexFromItem(item[0])
-				self.ui.listFiles.setCurrentIndex(index)
+		if self.selectedFiles:
+			selection_model = self.ui.listFiles.selectionModel()
+			selection = QItemSelection()
 
+			for selectedFile in self.selectedFiles:
+				items = self.listFiles_model.findItems(selectedFile)
+				for item in items:
+					index = self.listFiles_model.indexFromItem(item)
+					selection.select(index, index)
 
-
+			selection_model.select(selection, QItemSelectionModel.Select)
 
 	def slotOK(self):
-		self.m_soundAction = {'name': 'play sound', 'pack': self.selectedVoicepack, 'cat' : self.selectedCategory, 'file' : self.selectedFile}
+		self.m_soundAction = {'name': 'play sound', 'pack': self.selectedVoicepack, 'cat' : self.selectedCategory, 'file' : self.selectedFiles}
 		super().accept()
 
 	def slotCancel(self):
@@ -102,11 +104,9 @@ class SoundActionEditWnd(QDialog):
 		self.ui.buttonOkay.setEnabled(False)
 		self.ui.buttonPlaySound.setEnabled(False)
 
-
 	def onFileSelect(self):
-		index = self.ui.listFiles.currentIndex()
-		itemText = index.data()
-		self.selectedFile  = itemText
+		selected_indexes = self.ui.listFiles.selectedIndexes()
+		self.selectedFiles  = [index.data() for index in selected_indexes]
 		self.ui.buttonOkay.setEnabled(True)
 		self.ui.buttonPlaySound.setEnabled(True)
 
@@ -122,7 +122,7 @@ class SoundActionEditWnd(QDialog):
 			self.listCategories_model.removeRows( 0, self.listCategories_model.rowCount() )
 			self.listFiles_model.removeRows( 0, self.listFiles_model.rowCount() )
 			self.selectedCategory  = False
-			self.selectedFile      = False
+			self.selectedFiles     = []
 
 		filter_categories = self.ui.filterCategories.toPlainText()
 		if len(filter_categories) == 0:
@@ -142,7 +142,7 @@ class SoundActionEditWnd(QDialog):
 
 		if reset == True:
 			self.listFiles_model.removeRows( 0, self.listFiles_model.rowCount() )
-			self.selectedFile = False
+			self.selectedFiles = []
 
 		filter_files = self.ui.filterFiles.toPlainText()
 		if len(filter_files) == 0:
@@ -157,7 +157,7 @@ class SoundActionEditWnd(QDialog):
 			self.listFiles_model.appendRow(item)
 
 	def playSound(self):
-		sound_file = './voicepacks/' + self.selectedVoicepack + '/' + self.selectedCategory + '/' + self.selectedFile
+		sound_file = './voicepacks/' + self.selectedVoicepack + '/' + self.selectedCategory + '/' + self.selectedFiles[0]
 		self.p_sounds.play(sound_file)
 
 	def stopSound(self):
